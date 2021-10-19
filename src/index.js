@@ -1,6 +1,7 @@
+// Hours: 2
 import * as THREE from 'three'
 
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+// import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { Water } from 'three/examples/jsm/objects/Water'
 import { Sky } from 'three/examples/jsm/objects/Sky'
 
@@ -17,8 +18,14 @@ window.addEventListener('DOMContentLoaded', () => {
     let shark
     let sharkMixer
 
+    let flashLight
+
+    let panX = 0
+    let panY = 0
+
     const loader = new FBXLoader()
     const clock = new THREE.Clock()
+    const lookAt = new THREE.Vector3(0, 1, 1)
 
     function onWindowResize() {
         const container = document.getElementById('GLWindow')
@@ -28,8 +35,17 @@ window.addEventListener('DOMContentLoaded', () => {
         renderer.setSize(container.clientWidth, container.clientHeight)
     }
 
+    function onMouseMove(e) {
+        panX += e.movementX
+        panY += e.movementY
+    }
+
     function init() {
-        renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('WebGLCanvas') })
+        renderer = new THREE.WebGLRenderer({
+            canvas: document.getElementById('WebGLCanvas'),
+            antialias: true,
+            shadowMap: true,
+        })
         renderer.setPixelRatio(window.devicePixelRatio)
         renderer.setSize(window.innerWidth, window.innerHeight)
         renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -37,13 +53,29 @@ window.addEventListener('DOMContentLoaded', () => {
         scene = new THREE.Scene()
 
         camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 20000)
-        camera.position.set(0, 10, 0)
-        camera.lookAt(new THREE.Vector3(0, 0, 1000))
+        camera.position.set(0, 1, 0)
+        camera.lookAt(lookAt)
 
         onWindowResize()
 
         const light = new THREE.AmbientLight(0x404040, 1)
         scene.add(light)
+
+        flashLight = new THREE.SpotLight(0xffffff)
+        flashLight.position.set(0, 1, 0)
+        flashLight.castShadow = true
+        flashLight.angle = Math.PI / 8
+        flashLight.intensity = 5
+        flashLight.shadow.mapSize.width = 1024
+        flashLight.shadow.mapSize.height = 1024
+        flashLight.shadow.camera.near = 1
+        flashLight.shadow.camera.far = 1000
+        flashLight.shadow.camera.fov = 30
+
+        scene.add(flashLight)
+        scene.add(flashLight.target)
+
+        flashLight.target.position.set(0, 0, 1000)
 
         sun = new THREE.Vector3()
 
@@ -109,12 +141,9 @@ window.addEventListener('DOMContentLoaded', () => {
         mesh.position.set(0, 0, 20)
         scene.add(mesh)
 
-        const controls = new OrbitControls(camera, renderer.domElement)
-        controls.maxPolarAngle = Math.PI * 0.495
-        controls.target.set(0, 0, 100)
-        controls.minDistance = 40.0
-        controls.maxDistance = 200.0
-        controls.update()
+        // const controls = new OrbitControls(camera, renderer.domElement)
+        // controls.target.set(0, 0, 100)
+        // controls.update()
 
         window.addEventListener('resize', onWindowResize)
 
@@ -147,6 +176,20 @@ window.addEventListener('DOMContentLoaded', () => {
             scene.add(model)
             model.position.set(10, 0, 50)
         })
+
+        document.getElementById('WebGLCanvas').addEventListener('click', () => {
+            document.getElementById('WebGLCanvas').requestPointerLock()
+        })
+
+        const onPointerLockChange = () => {
+            if (document.pointerLockElement === document.getElementById('WebGLCanvas')) {
+                document.addEventListener('mousemove', onMouseMove, false)
+            } else {
+                document.removeEventListener('mousemove', onMouseMove, false)
+            }
+        }
+
+        document.addEventListener('pointerlockchange', onPointerLockChange, false)
     }
 
     function render() {
@@ -155,7 +198,16 @@ window.addEventListener('DOMContentLoaded', () => {
             sharkMixer.update(delta)
         }
         water.material.uniforms.time.value += 1.0 / 60.0
+
+        lookAt.applyAxisAngle(new THREE.Vector3(0, 1, 0), panX * (Math.PI / 180 / -10))
+        // lookAt.applyAxisAngle(new THREE.Vector3(1, 0, 0), panYY* (Math.PI / 180 / -10))
+        flashLight.target.position.copy(lookAt)
+        camera.lookAt(lookAt)
+
         renderer.render(scene, camera)
+
+        panX = 0
+        panY = 0
     }
 
     function animate() {
