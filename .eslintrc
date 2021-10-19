@@ -1,0 +1,23 @@
+{
+    "extends": ["airbnb", "airbnb/hooks"],
+    "env": {
+        "browser": true,
+    },
+    "settings": {
+        "import/resolver": "webpack"
+    },
+    "rules": {
+        "indent": ["error", 4, {
+            "SwitchCase": 1,
+        }],
+        "no-multiple-empty-lines": "warn",
+        "semi": ["error", "never"],
+        "no-param-reassign": ["error", { "props": false }],
+        "no-underscore-dangle": "off",
+        "no-unused-vars": 1,
+        "max-len": ["warn", 120],
+        "import/prefer-default-export": "off",
+        "object-curly-newline": "off",
+        "class-methods-use-this": 1
+    }
+}

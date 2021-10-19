@@ -1,0 +1,36 @@
+{
+    "name": "sharkGame",
+    "version": "1.0.0",
+    "description": "shark game",
+    "repository": "github.com",
+    "main": "index.js",
+    "scripts": {
+        "start": "webpack serve --mode=development --progress",
+        "build": "webpack --mode=production",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "copy-webpack-plugin": "^9.0.0",
+        "css-loader": "^5.2.6",
+        "eslint": "^7.28.0",
+        "eslint-config-airbnb": "^18.2.1",
+        "eslint-import-resolver-webpack": "^0.13.1",
+        "eslint-plugin-import": "^2.22.1",
+        "eslint-plugin-jsx-a11y": "^6.4.1",
+        "eslint-plugin-react": "^7.21.5",
+        "eslint-plugin-react-hooks": "^4",
+        "eslint-webpack-plugin": "^2.5.4",
+        "html-webpack-plugin": "^5.3.1",
+        "mini-css-extract-plugin": "^1.6.0",
+        "sass": "^1.35.1",
+        "sass-loader": "^12.1.0",
+        "webpack": "^5.39.0",
+        "webpack-cli": "^4.7.2",
+        "webpack-dev-server": "^3.11.2"
+    },
+    "dependencies": {
+        "three": "^0.129.0"
+    }
+}
