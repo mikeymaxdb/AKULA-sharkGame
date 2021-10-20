@@ -1,4 +1,4 @@
-// Hours: 2
+// Hours: 2.5
 import * as THREE from 'three'
 
 // import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
@@ -22,6 +22,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let panX = 0
     let panY = 0
+
+    let swimUp = false
 
     const loader = new FBXLoader()
     const clock = new THREE.Clock()
@@ -189,7 +191,29 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        const onKeyDown = (e) => {
+            switch (e.code) {
+                case 'KeyW':
+                    swimUp = true
+                    break
+                default:
+                    break
+            }
+        }
+
+        const onKeyUp = (e) => {
+            switch (e.code) {
+                case 'KeyW':
+                    swimUp = false
+                    break
+                default:
+                    break
+            }
+        }
+
         document.addEventListener('pointerlockchange', onPointerLockChange, false)
+        document.addEventListener('keydown', onKeyDown, false)
+        document.addEventListener('keyup', onKeyUp, false)
     }
 
     function render() {
@@ -199,8 +223,17 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         water.material.uniforms.time.value += 1.0 / 60.0
 
-        lookAt.applyAxisAngle(new THREE.Vector3(0, 1, 0), panX * (Math.PI / 180 / -10))
-        // lookAt.applyAxisAngle(new THREE.Vector3(1, 0, 0), panYY* (Math.PI / 180 / -10))
+        if (swimUp) {
+            camera.position.y = Math.max(-10, Math.min(2, camera.position.y + 0.05))
+        } else {
+            camera.position.y = Math.max(-10, Math.min(2, camera.position.y - 0.05))
+        }
+
+        // lookAt.y = camera.position.y + (panY / -100)
+        lookAt.y = camera.position.y
+        lookAt.applyAxisAngle(new THREE.Vector3(0, 1, 0), panX * (Math.PI / 180 / -5))
+
+        flashLight.position.copy(camera.position)
         flashLight.target.position.copy(lookAt)
         camera.lookAt(lookAt)
 
