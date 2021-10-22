@@ -1,4 +1,4 @@
-import { PlaneGeometry, TextureLoader, Vector3, RepeatWrapping } from 'three'
+import { PlaneGeometry, TextureLoader, Vector3, RepeatWrapping, MathUtils, DoubleSide } from 'three'
 import { Water as WaterExample } from 'three/examples/jsm/objects/Water'
 
 export default function Water() {
@@ -21,6 +21,18 @@ export default function Water() {
         },
     )
 
+    const sun = new Vector3()
+
+    const elevation = 3
+    const azimuth = 180
+
+    const phi = MathUtils.degToRad(90 - elevation)
+    const theta = MathUtils.degToRad(azimuth)
+
+    sun.setFromSphericalCoords(1, phi, theta)
+
+    wat.material.uniforms.sunDirection.value.copy(sun).normalize()
+    wat.material.side = DoubleSide
     wat.rotation.x = (-1 * Math.PI) / 2
 
     return wat

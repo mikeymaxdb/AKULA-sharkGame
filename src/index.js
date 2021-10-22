@@ -1,8 +1,7 @@
-// Hours: 4.5
+// Hours: 5
 import * as THREE from 'three'
 
 // import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { Sky } from 'three/examples/jsm/objects/Sky'
 
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
 
@@ -17,7 +16,6 @@ let camera
 let scene
 let renderer
 let water
-let sun
 let shark
 const animations = []
 const loadingFish = []
@@ -58,11 +56,12 @@ function init() {
     renderer.outputEncoding = THREE.sRGBEncoding
 
     scene = new THREE.Scene()
-    scene.background = 0x000000
-    scene.fog = new THREE.FogExp2(0x000000, 0.01)
+    scene.background = new THREE.Color(0x002233)
+    scene.fog = new THREE.FogExp2(0x002233, 0.01)
 
     camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 20000)
     camera.position.set(0, -13, 0)
+    // camera.position.set(0, 1, 0)
     camera.lookAt(lookAt)
 
     onWindowResize()
@@ -73,29 +72,10 @@ function init() {
     flashLight = new Flashlight()
     scene.add(flashLight)
     scene.add(flashLight.target)
-
     flashLight.target.position.set(0, 0, 1000)
 
-    sun = new THREE.Vector3()
-
-    // Water
     water = new Water()
-    water.material.side = THREE.DoubleSide
     scene.add(water)
-
-    const parameters = {
-        elevation: 3,
-        azimuth: 180,
-    }
-
-    const pmremGenerator = new THREE.PMREMGenerator(renderer)
-
-    const phi = THREE.MathUtils.degToRad(90 - parameters.elevation)
-    const theta = THREE.MathUtils.degToRad(parameters.azimuth)
-
-    sun.setFromSphericalCoords(1, phi, theta)
-
-    water.material.uniforms.sunDirection.value.copy(sun).normalize()
 
     const geometry = new THREE.BoxGeometry(1, 1, 1)
     const material = new THREE.MeshStandardMaterial({ roughness: 0 })
@@ -103,24 +83,6 @@ function init() {
     const mesh = new THREE.Mesh(geometry, material)
     mesh.position.set(0, 0, 20)
     scene.add(mesh)
-
-    const underwaterGeo = new THREE.SphereGeometry(2)
-    const underwaterMat = new THREE.MeshStandardMaterial({
-        transparent: true,
-        opacity: 0.5,
-        color: 0x49ef4,
-        side: THREE.BackSide,
-        lightMapIntesity: 0,
-    })
-    const underwaterMesh = new THREE.Mesh(underwaterGeo, underwaterMat)
-    underwaterMesh.position.copy(camera.position)
-    // scene.add(underwaterMesh)
-
-    // const controls = new OrbitControls(camera, renderer.domElement)
-    // controls.target.set(0, 0, 100)
-    // controls.update()
-
-    window.addEventListener('resize', onWindowResize)
 
     loader.load('assets/Shark.fbx', (model) => {
         shark = model
@@ -141,7 +103,7 @@ function init() {
         animations.push(sharkMixer)
     })
 
-    for (let i = 0; i < 40; i += 1) {
+    for (let i = 0; i < 60; i += 1) {
         loadingFish.push(loadFish('assets/ClownFish.fbx', 0.02))
     }
     Promise.all(loadingFish).then((loadedFish) => {
@@ -181,6 +143,7 @@ function init() {
         }
     }
 
+    window.addEventListener('resize', onWindowResize)
     document.addEventListener('pointerlockchange', onPointerLockChange, false)
     document.addEventListener('keydown', onKeyDown, false)
     document.addEventListener('keyup', onKeyUp, false)
@@ -193,11 +156,11 @@ function render() {
 
     water.material.uniforms.time.value += 1.0 / 60.0
 
-    // if (swimUp) {
-    //     camera.position.y = Math.max(-10, Math.min(2, camera.position.y + 0.05))
-    // } else {
-    //     camera.position.y = Math.max(-10, Math.min(2, camera.position.y - 0.05))
-    // }
+    if (swimUp) {
+        camera.position.y = Math.max(-10, Math.min(2, camera.position.y + 0.05))
+    } else {
+        camera.position.y = Math.max(-10, Math.min(2, camera.position.y - 0.05))
+    }
 
     // lookAt.y = camera.position.y + (panY / -100)
     lookAt.y = camera.position.y
@@ -215,7 +178,6 @@ function render() {
     const theta = Math.PI * delta * 0.01
 
     fishes.forEach((fish) => {
-        // fish.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.PI * delta * 0.05))
         fish.position.set(
             fish.position.x * Math.cos(theta) + fish.position.z * Math.sin(theta),
             fish.position.y,
