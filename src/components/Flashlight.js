@@ -7,6 +7,8 @@ export default function Flashlight() {
     flashLight.castShadow = true
     flashLight.angle = Math.PI / 8
     flashLight.intensity = 5
+    flashLight.penumbra = 0.5
+    flashLight.decay = 2
     flashLight.shadow.mapSize.width = 1024
     flashLight.shadow.mapSize.height = 1024
     flashLight.shadow.camera.near = 1

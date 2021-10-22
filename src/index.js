@@ -1,10 +1,12 @@
-// Hours: 2.5
+// Hours: 4.5
 import * as THREE from 'three'
 
 // import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { Sky } from 'three/examples/jsm/objects/Sky'
 
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
+
+import loadFish from 'utils/loadFish'
 
 import Flashlight from 'components/Flashlight'
 import Water from 'components/Water'
@@ -18,7 +20,8 @@ let water
 let sun
 let shark
 const animations = []
-const fish = []
+const loadingFish = []
+let fishes = []
 
 let flashLight
 
@@ -59,12 +62,12 @@ function init() {
     scene.fog = new THREE.FogExp2(0x000000, 0.01)
 
     camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 20000)
-    camera.position.set(0, -3, 0)
+    camera.position.set(0, -13, 0)
     camera.lookAt(lookAt)
 
     onWindowResize()
 
-    const light = new THREE.AmbientLight(0x404040, 0.5)
+    const light = new THREE.AmbientLight(0x404040, 0.1)
     scene.add(light)
 
     flashLight = new Flashlight()
@@ -129,7 +132,7 @@ function init() {
             }
         })
         scene.add(shark)
-        shark.position.set(0, -5, 50)
+        shark.position.set(0, -13, 50)
 
         const sharkMixer = new THREE.AnimationMixer(shark)
         const action = sharkMixer.clipAction(shark.animations[0])
@@ -138,26 +141,12 @@ function init() {
         animations.push(sharkMixer)
     })
 
-    const generateFish = (model) => {
-
+    for (let i = 0; i < 40; i += 1) {
+        loadingFish.push(loadFish('assets/ClownFish.fbx', 0.02))
     }
-
-    loader.load('assets/ClownFish.fbx', (model) => {
-        model.scale.setScalar(0.02)
-        model.traverse((c) => {
-            if (c.isMesh) {
-                c.castShadow = true
-                c.receiveShadow = true
-            }
-        })
-        model.position.set(10, -5, 50)
-
-        // const mixer = new THREE.AnimationMixer(model)
-        // const action = mixer.clipAction(model.animations[0])
-        // action.timeScale = 1
-        // action.play()
-        // animations.push(mixer)
-        scene.add(model)
+    Promise.all(loadingFish).then((loadedFish) => {
+        fishes = loadedFish
+        fishes.forEach((f) => scene.add(f))
     })
 
     document.getElementById('WebGLCanvas').addEventListener('click', () => {
@@ -222,6 +211,21 @@ function render() {
         shark.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.PI * delta * 0.05))
         shark.setRotationFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(shark.position.x, shark.position.z) - (Math.PI / 2))
     }
+
+    const theta = Math.PI * delta * 0.01
+
+    fishes.forEach((fish) => {
+        // fish.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.PI * delta * 0.05))
+        fish.position.set(
+            fish.position.x * Math.cos(theta) + fish.position.z * Math.sin(theta),
+            fish.position.y,
+            fish.position.z * Math.cos(theta) - fish.position.x * Math.sin(theta),
+        )
+
+        fish.setRotationFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(fish.position.x, fish.position.z) - (Math.PI / 2))
+
+        fish.mixer.update(delta)
+    })
 
     renderer.render(scene, camera)
 
