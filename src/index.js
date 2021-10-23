@@ -1,9 +1,5 @@
-// Hours: 5
+// Hours: 5.5
 import * as THREE from 'three'
-
-// import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
 
 import loadFish from 'utils/loadFish'
 
@@ -17,22 +13,22 @@ let scene
 let renderer
 let water
 let shark
-const animations = []
 const loadingFish = []
 let fishes = []
+
+const MAXPOS = 200
 
 let flashLight
 
 let panX = 0
-let panY = 0
+// let panY = 0
 
 let swimUp = false
 
-const loader = new FBXLoader()
 const clock = new THREE.Clock()
 const lookAt = new THREE.Vector3(0, 1, 1)
 
-function onWindowResize() {
+const onWindowResize = () => {
     const container = document.getElementById('GLWindow')
     camera.aspect = container.clientWidth / container.clientHeight
     camera.updateProjectionMatrix()
@@ -40,9 +36,37 @@ function onWindowResize() {
     renderer.setSize(container.clientWidth, container.clientHeight)
 }
 
-function onMouseMove(e) {
+const onMouseMove = (e) => {
     panX += e.movementX
-    panY += e.movementY
+    // panY += e.movementY
+}
+
+const onPointerLockChange = () => {
+    if (document.pointerLockElement === document.getElementById('WebGLCanvas')) {
+        document.addEventListener('mousemove', onMouseMove, false)
+    } else {
+        document.removeEventListener('mousemove', onMouseMove, false)
+    }
+}
+
+const onKeyDown = (e) => {
+    switch (e.code) {
+        case 'KeyW':
+            swimUp = true
+            break
+        default:
+            break
+    }
+}
+
+const onKeyUp = (e) => {
+    switch (e.code) {
+        case 'KeyW':
+            swimUp = false
+            break
+        default:
+            break
+    }
 }
 
 function init() {
@@ -79,28 +103,14 @@ function init() {
 
     const geometry = new THREE.BoxGeometry(1, 1, 1)
     const material = new THREE.MeshStandardMaterial({ roughness: 0 })
+    const box = new THREE.Mesh(geometry, material)
+    box.position.set(0, 0, 20)
+    // scene.add(box)
 
-    const mesh = new THREE.Mesh(geometry, material)
-    mesh.position.set(0, 0, 20)
-    scene.add(mesh)
-
-    loader.load('assets/Shark.fbx', (model) => {
+    loadFish('assets/Shark.fbx', 0.1).then((model) => {
         shark = model
-        shark.scale.setScalar(0.1)
-        shark.traverse((c) => {
-            if (c.isMesh) {
-                c.castShadow = true
-                c.receiveShadow = true
-            }
-        })
-        scene.add(shark)
         shark.position.set(0, -13, 50)
-
-        const sharkMixer = new THREE.AnimationMixer(shark)
-        const action = sharkMixer.clipAction(shark.animations[0])
-        action.timeScale = 5
-        action.play()
-        animations.push(sharkMixer)
+        scene.add(shark)
     })
 
     for (let i = 0; i < 60; i += 1) {
@@ -108,40 +118,20 @@ function init() {
     }
     Promise.all(loadingFish).then((loadedFish) => {
         fishes = loadedFish
-        fishes.forEach((f) => scene.add(f))
+        fishes.forEach((fish) => {
+            scene.add(fish)
+
+            fish.position.set(
+                (Math.random() * MAXPOS) - (MAXPOS / 2),
+                (-1 * Math.random() * 50) - 7,
+                (Math.random() * MAXPOS) - (MAXPOS / 2),
+            )
+        })
     })
 
     document.getElementById('WebGLCanvas').addEventListener('click', () => {
         document.getElementById('WebGLCanvas').requestPointerLock()
     })
-
-    const onPointerLockChange = () => {
-        if (document.pointerLockElement === document.getElementById('WebGLCanvas')) {
-            document.addEventListener('mousemove', onMouseMove, false)
-        } else {
-            document.removeEventListener('mousemove', onMouseMove, false)
-        }
-    }
-
-    const onKeyDown = (e) => {
-        switch (e.code) {
-            case 'KeyW':
-                swimUp = true
-                break
-            default:
-                break
-        }
-    }
-
-    const onKeyUp = (e) => {
-        switch (e.code) {
-            case 'KeyW':
-                swimUp = false
-                break
-            default:
-                break
-        }
-    }
 
     window.addEventListener('resize', onWindowResize)
     document.addEventListener('pointerlockchange', onPointerLockChange, false)
@@ -152,15 +142,13 @@ function init() {
 function render() {
     const delta = clock.getDelta()
 
-    animations.forEach((a) => a.update(delta))
-
     water.material.uniforms.time.value += 1.0 / 60.0
 
-    if (swimUp) {
-        camera.position.y = Math.max(-10, Math.min(2, camera.position.y + 0.05))
-    } else {
-        camera.position.y = Math.max(-10, Math.min(2, camera.position.y - 0.05))
-    }
+    // if (swimUp) {
+    //     camera.position.y = Math.max(-10, Math.min(2, camera.position.y + 0.05))
+    // } else {
+    //     camera.position.y = Math.max(-10, Math.min(2, camera.position.y - 0.05))
+    // }
 
     // lookAt.y = camera.position.y + (panY / -100)
     lookAt.y = camera.position.y
@@ -173,6 +161,7 @@ function render() {
     if (shark) {
         shark.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.PI * delta * 0.05))
         shark.setRotationFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(shark.position.x, shark.position.z) - (Math.PI / 2))
+        shark.mixer.update(delta)
     }
 
     const theta = Math.PI * delta * 0.01
@@ -192,7 +181,7 @@ function render() {
     renderer.render(scene, camera)
 
     panX = 0
-    panY = 0
+    // panY = 0
 }
 
 window.addEventListener('DOMContentLoaded', () => {
