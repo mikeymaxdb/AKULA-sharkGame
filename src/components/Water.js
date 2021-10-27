@@ -24,7 +24,7 @@ export default function Water() {
     const sun = new Vector3()
 
     const elevation = 3
-    const azimuth = 180
+    const azimuth = 0
 
     const phi = MathUtils.degToRad(90 - elevation)
     const theta = MathUtils.degToRad(azimuth)
