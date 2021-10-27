@@ -10,14 +10,20 @@
             <canvas id="WebGLCanvas" width=1280 height=720 />
         </div>
         <div id="UI">
-            <div id="LoadingScreen" class="hidden" >Loading...</div>
+            <div id="LoadingScreen" class="" >Loading...</div>
             <div id="StartScreen" class="hidden">
                 <h1>Shark Game</h1>
                 <ul>
-                    <li><button id="StartButton">Start</button></li>
+                    <li><button id="IntroButton">Start</button></li>
                 </ul>
             </div>
-            <div id="GameScreen">
+            <div id="IntroScreen" class="hidden">
+                <p>
+                    What started out as a weekend fishing trip with your buddies has turned into your worst nightmare. In the dead of night no one noticed that you have fallen off the boat. In a panic, the only thing you managed to grab was a crank-operated flashlight. It will take some time for your friends to come back and find you. You remember the news from this morning, there is a SHARK in these waters...
+                </p>
+                <button id="StartButton">Survive</button>
+            </div>
+            <div id="GameScreen" class="hidden">
                 <div class="footer">
                     <div class="controls">
                         <ul>
@@ -30,13 +36,13 @@
                         <div class="stat">
                             <span>Air</span>
                             <div class="bar">
-                                <div id="airStat" class="barValue"></div>
+                                <div id="AirStat" class="barValue"></div>
                             </div>
                         </div>
                         <div class="stat">
                             <span>Charge</span>
                             <div class="bar">
-                                <div id="chargeStat" class="barValue"></div>
+                                <div id="ChargeStat" class="barValue"></div>
                             </div>
                         </div>
                     </div>

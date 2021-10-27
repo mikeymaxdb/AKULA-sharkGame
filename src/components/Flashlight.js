@@ -15,5 +15,7 @@ export default function Flashlight() {
     flashLight.shadow.camera.far = 1000
     flashLight.shadow.camera.fov = 30
 
+    flashLight.visible = false
+
     return flashLight
 }
