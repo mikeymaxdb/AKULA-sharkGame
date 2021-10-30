@@ -12,6 +12,10 @@ body {
     margin: 0;
 }
 
+ul {
+    padding: 0;
+}
+
 button {
     cursor: pointer;
     pointer-events: all;
@@ -60,6 +64,10 @@ button {
     align-items: center;
     flex-direction: column;
 
+    h1 {
+        letter-spacing: 0.75rem;
+        margin-right: -0.75rem;
+    }
     ul {
         list-style: none;
     }
@@ -74,6 +82,8 @@ button {
     p {
         width: 50%;
         padding-bottom: 2rem;
+        line-height: 1.25rem;
+        text-shadow: 0 0 10px #000;
     }
 }
 
@@ -94,7 +104,6 @@ button {
             ul {
                 list-style: none;
                 margin: 0;
-                padding: 0;
 
                 li {
                     display: inline-block;

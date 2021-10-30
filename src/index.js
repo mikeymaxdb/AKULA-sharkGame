@@ -1,4 +1,4 @@
-// Hours: 7.5
+// Hours: 8.5
 /*
  * intro screen
  * gameplay
@@ -28,6 +28,12 @@ const state = {
     air: 100,
     charge: 100,
     flashLightOn: false,
+    shark: {
+        resetTarget: new THREE.Vector3(),
+        resetting: false,
+        swimDelay: 3,
+        speed: 1,
+    },
 }
 
 const MAXPOS = 200
@@ -47,6 +53,18 @@ const onWindowResize = () => {
     camera.updateProjectionMatrix()
 
     renderer.setSize(container.clientWidth, container.clientHeight)
+}
+
+const onStart = () => {
+    eventQueue.push('gameStart')
+}
+
+const onIntro = () => {
+    eventQueue.push('showIntro')
+}
+
+const resetShark = () => {
+    eventQueue.push('resetShark')
 }
 
 const onMouseMove = (e) => {
@@ -77,6 +95,9 @@ const onKeyDown = (e) => {
         case 'Space':
             eventQueue.push('flashLightOn')
             break
+        case 'KeyR':
+            resetShark()
+            break
         default:
             break
     }
@@ -98,14 +119,6 @@ const onKeyUp = (e) => {
     }
 }
 
-const onStart = () => {
-    eventQueue.push('gameStart')
-}
-
-const onIntro = () => {
-    eventQueue.push('showIntro')
-}
-
 function init() {
     renderer = new THREE.WebGLRenderer({
         canvas: document.getElementById('WebGLCanvas'),
@@ -118,7 +131,7 @@ function init() {
 
     scene = new THREE.Scene()
     scene.background = new THREE.Color(0x002233)
-    scene.fog = new THREE.FogExp2(0x002233, 0.01)
+    scene.fog = new THREE.FogExp2(0x002233, 0.008)
 
     camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 20000)
     // camera.position.set(0, -13, 0)
@@ -144,9 +157,9 @@ function init() {
     box.position.set(0, 0, 20)
     // scene.add(box)
 
-    loadFish('assets/Shark.fbx', 0.1).then((model) => {
+    loadFish('assets/Shark.fbx', 0.1, 5).then((model) => {
         shark = model
-        shark.position.set(0, -13, 50)
+        shark.position.set(0, -13, 200)
         scene.add(shark)
     })
 
@@ -197,9 +210,9 @@ function render() {
         document.getElementById('ChargeStat').style.width = `${state.charge}%`
 
         if (swimUp) {
-            camera.position.y = Math.max(-10, Math.min(2, camera.position.y + 0.05))
+            camera.position.y = Math.max(-10, Math.min(2, camera.position.y + 0.07))
         } else {
-            camera.position.y = Math.max(-10, Math.min(2, camera.position.y - 0.05))
+            camera.position.y = Math.max(-10, Math.min(2, camera.position.y - 0.07))
         }
 
         // lookAt.y = camera.position.y + (panY / -100)
@@ -209,14 +222,6 @@ function render() {
         flashLight.position.copy(camera.position)
         flashLight.target.position.copy(lookAt)
         camera.lookAt(lookAt)
-
-        if (shark) {
-            shark.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.PI * delta * 0.05))
-            shark.setRotationFromAxisAngle(
-                new THREE.Vector3(0, 1, 0), Math.atan2(shark.position.x, shark.position.z) - (Math.PI / 2),
-            )
-            shark.mixer.update(delta)
-        }
 
         const theta = Math.PI * delta * 0.01
 
@@ -233,6 +238,40 @@ function render() {
 
             fish.mixer.update(delta)
         })
+
+        // Shark
+        shark.mixer.update(delta)
+        if (state.shark.swimDelay > 0) {
+            state.shark.swimDelay -= delta
+        } else {
+            let target
+
+            if (state.shark.resetting) {
+                // Shark is swimming away while resetting
+                target = state.shark.resetTarget
+                if (shark.position.length() > state.shark.resetTarget.length() - 10) {
+                    resetShark()
+                }
+            } else {
+                // Shark swims towards camera
+                target = camera.position.clone()
+                target.y -= 2.5
+            }
+
+            // Update shark position and rotation
+            shark.position.lerp(target, state.shark.speed * delta)
+
+            // In the range that you can spook the shark
+            if (shark.position.length() < 50) {
+                if (shark.position.length() < 20) {
+                    // Dead
+                } else if (state.flashLightOn) {
+                    // check for flashlight angle
+                    state.shark.resetting = true
+                    state.shark.resetTarget.set(0, -13, 400)
+                }
+            }
+        }
     }
 
     renderer.render(scene, camera)
@@ -266,6 +305,12 @@ function processEvents() {
             case 'flashLightOff':
                 flashLight.visible = false
                 state.flashLightOn = false
+                break
+            case 'resetShark':
+                shark.position.set(0, -30, 800)
+                // state.shark.swimDelay = (Math.random() * 10) + 10
+                state.shark.swimDelay = 3
+                state.shark.resetting = false
                 break
             default:
                 break
