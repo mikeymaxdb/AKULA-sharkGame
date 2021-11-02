@@ -18,7 +18,8 @@ export default function loadFish(url, scale, timeScale = null) {
             if (timeScale) {
                 action.timeScale = timeScale
             } else {
-                action.timeScale = (Math.random() * 2) + 0.2
+                model.speed = (Math.random() * 1.5) + 0.2
+                action.timeScale = model.speed
             }
             action.play()
 

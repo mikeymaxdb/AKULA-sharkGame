@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Shark Game</title>
+        <title>AKULA</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
     </head>
     <body>
         <div id="GLWindow">
             <canvas id="WebGLCanvas" width=1280 height=720 />
         </div>
+        <div id="FPSCounter"></div>
         <div id="UI">
-            <div id="LoadingScreen" class="" >Loading...</div>
+            <div id="LoadingScreen" class="" >Loading</div>
             <div id="StartScreen" class="hidden">
                 <h1>AKULA</h1>
                 <ul>
@@ -19,9 +21,9 @@
             </div>
             <div id="IntroScreen" class="hidden">
                 <p>
-                    What started out as a weekend fishing trip with your buddies has turned into your worst nightmare. In the dead of night no one noticed that you have fallen off the boat. In a panic, the only thing you managed to grab was a crank-operated flashlight. It will take some time for your friends to come back and find you. You remember the news from this morning, there is a SHARK in these waters...
+                    What started out as a weekend fishing trip with your buddies has turned into your worst nightmare. In the dead of night, no one noticed that you have fallen off the boat. In a panic, the only thing you managed to grab was a crank-operated flashlight. It will take some time for your friends to come back and find you. You remember the news from this morning, there is a <span>SHARK</span> in these waters...
                 </p>
-                <button id="StartButton">Survive</button>
+                <button id="StartButton" disabled>Survive</button>
             </div>
             <div id="GameScreen" class="hidden">
                 <div class="footer">
@@ -47,6 +49,14 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <div id="DeathScreen" class="hidden">
+                <p>You were <span>TORN APART</span></p>
+                <button id="RestartButton">Try again</button>
+            </div>
+            <div id="VictoryScreen" class="hidden">
+                <p>Rescue is here<br />Your delinquent friends have come to your aid</p>
+                <button id="RestartButton">Play again</button>
             </div>
         </div>
     </body>

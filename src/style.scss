@@ -1,28 +1,51 @@
+@font-face {
+    font-family: akula;
+    src: url('../assets/28-days-later.ttf');
+}
+
 * {
     box-sizing: border-box;
 }
 
 html {
     font-size: 3vh;
-    font-family: arial, sans-serif;
+    font-family: akula, arial, sans-serif;
     color: #fff;
 }
 
 body {
     margin: 0;
+    background-color: #002233;
 }
 
 ul {
     padding: 0;
 }
 
+p {
+    font-size: 1.25rem;
+    width: 50%;
+    padding-bottom: 2rem;
+    line-height: 1.5rem;
+    text-shadow: 0 0 10px #000;
+
+    span {
+        color: #ec0000;
+    }
+}
+
 button {
+    font-family: inherit;
     cursor: pointer;
     pointer-events: all;
     border: none;
     font-size: 1rem;
     border-radius: 0.25rem;
     padding: 0.25rem 1rem;
+
+    &:disabled {
+        opacity: 0.5;
+    }
 }
 
 #GLWindow {
@@ -32,6 +55,15 @@ button {
     canvas {
         display: block;
     }
+}
+
+#FPSCounter {
+    position: fixed;
+    top: 0;
+    left: 0;
+    color: #888;
+    font-size: 0.5rem;
+    padding: 0.1rem;
 }
 
 #UI {
@@ -58,7 +90,10 @@ button {
     align-items: center;
 }
 
-#StartScreen {
+#StartScreen,
+#IntroScreen,
+#DeathScreen,
+#VictoryScreen {
     display: flex;
     justify-content:center;
     align-items: center;
@@ -67,23 +102,24 @@ button {
     h1 {
         letter-spacing: 0.75rem;
         margin-right: -0.75rem;
+        text-shadow: 0 0 10px #000;
     }
     ul {
         list-style: none;
     }
 }
 
-#IntroScreen {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
+#DeathScreen {
+    background-color: #000;
 
     p {
-        width: 50%;
-        padding-bottom: 2rem;
-        line-height: 1.25rem;
-        text-shadow: 0 0 10px #000;
+        text-align: center;
+    }
+}
+
+#VictoryScreen {
+    p {
+        text-align: center;
     }
 }
 
@@ -107,7 +143,7 @@ button {
 
                 li {
                     display: inline-block;
-                    background-color: #444;
+                    background-color: #000;
                     border-radius: 0.25rem;
                     font-size: 0.75rem;
                     margin-right: 1rem;
@@ -124,7 +160,7 @@ button {
         }
         .stats {
             .stat {
-                background-color: #444;
+                background-color: #000;
                 border-radius: 0.25rem;
                 display: flex;
                 justify-content: space-between;

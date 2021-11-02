@@ -1,4 +1,4 @@
-// Hours: 8.5
+// Hours: 9.5
 /*
  * intro screen
  * gameplay
@@ -21,6 +21,10 @@ let water
 let shark
 const loadingFish = []
 let fishes = []
+
+let AirStat
+let ChargeStat
+let FPSCounter
 
 const eventQueue = []
 const state = {
@@ -45,7 +49,7 @@ let swimUp = false
 let crank = false
 
 const clock = new THREE.Clock()
-const lookAt = new THREE.Vector3(0, 1, 1)
+const lookAt = new THREE.Vector3(0, -10, 100)
 
 const onWindowResize = () => {
     const container = document.getElementById('GLWindow')
@@ -140,7 +144,7 @@ function init() {
 
     onWindowResize()
 
-    const light = new THREE.AmbientLight(0x404040, 0.05)
+    const light = new THREE.AmbientLight(0x000000, 0.05)
     scene.add(light)
 
     flashLight = new Flashlight()
@@ -163,9 +167,14 @@ function init() {
         scene.add(shark)
     })
 
-    for (let i = 0; i < 60; i += 1) {
+    for (let i = 0; i < 50; i += 1) {
         loadingFish.push(loadFish('assets/ClownFish.fbx', 0.02))
     }
+
+    for (let i = 0; i < 50; i += 1) {
+        loadingFish.push(loadFish('assets/TunaFish.fbx', 0.02))
+    }
+
     Promise.all(loadingFish).then((loadedFish) => {
         fishes = loadedFish
         fishes.forEach((fish) => {
@@ -187,10 +196,15 @@ function init() {
 
     document.getElementById('StartButton').onclick = onStart
     document.getElementById('IntroButton').onclick = onIntro
+
+    AirStat = document.getElementById('AirStat')
+    ChargeStat = document.getElementById('ChargeStat')
+    FPSCounter = document.getElementById('FPSCounter')
 }
 
 function render() {
     const delta = clock.getDelta()
+    FPSCounter.innerHTML = Math.round(1 / delta)
 
     water.material.uniforms.time.value += 1.0 / 60.0
 
@@ -200,14 +214,14 @@ function render() {
         } else {
             state.air = Math.min(100, state.air + ((100 / 5) * delta))
         }
-        document.getElementById('AirStat').style.width = `${state.air}%`
+        AirStat.style.width = `${state.air}%`
 
         if (state.flashLightOn) {
             state.charge = Math.max(0, state.charge - ((100 / 10) * delta))
         } else if (crank && camera.position.y > 0) {
             state.charge = Math.min(100, state.charge + ((100 / 20) * delta))
         }
-        document.getElementById('ChargeStat').style.width = `${state.charge}%`
+        ChargeStat.style.width = `${state.charge}%`
 
         if (swimUp) {
             camera.position.y = Math.max(-10, Math.min(2, camera.position.y + 0.07))
@@ -216,7 +230,7 @@ function render() {
         }
 
         // lookAt.y = camera.position.y + (panY / -100)
-        lookAt.y = camera.position.y
+        lookAt.y = camera.position.y - 10
         lookAt.applyAxisAngle(new THREE.Vector3(0, 1, 0), panX * (Math.PI / 180 / -5))
 
         flashLight.position.copy(camera.position)
@@ -227,9 +241,9 @@ function render() {
 
         fishes.forEach((fish) => {
             fish.position.set(
-                fish.position.x * Math.cos(theta) + fish.position.z * Math.sin(theta),
+                fish.position.x * Math.cos(theta * fish.speed) + fish.position.z * Math.sin(theta * fish.speed),
                 fish.position.y,
-                fish.position.z * Math.cos(theta) - fish.position.x * Math.sin(theta),
+                fish.position.z * Math.cos(theta * fish.speed) - fish.position.x * Math.sin(theta * fish.speed),
             )
 
             fish.setRotationFromAxisAngle(
@@ -264,7 +278,7 @@ function render() {
             // In the range that you can spook the shark
             if (shark.position.length() < 50) {
                 if (shark.position.length() < 20) {
-                    // Dead
+                    eventQueue.push('death')
                 } else if (state.flashLightOn) {
                     // check for flashlight angle
                     state.shark.resetting = true
@@ -290,6 +304,9 @@ function processEvents() {
             case 'showIntro':
                 document.getElementById('StartScreen').classList.add('hidden')
                 document.getElementById('IntroScreen').classList.remove('hidden')
+                window.setTimeout(() => {
+                    document.getElementById('StartButton').disabled = false
+                }, 5000)
                 break
             case 'gameStart':
                 document.getElementById('IntroScreen').classList.add('hidden')
@@ -297,6 +314,11 @@ function processEvents() {
                 requestPointerLock()
                 document.getElementById('WebGLCanvas').addEventListener('click', requestPointerLock)
                 state.gameLoopRunning = true
+                break
+            case 'death':
+                document.getElementById('GameScreen').classList.add('hidden')
+                document.getElementById('DeathScreen').classList.remove('hidden')
+                state.gameLoopRunning = false
                 break
             case 'flashLightOn':
                 flashLight.visible = true
