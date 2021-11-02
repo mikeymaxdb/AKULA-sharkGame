@@ -126,6 +126,10 @@ button {
 #GameScreen {
     position: relative;
 
+    #Time {
+        text-align: center;
+        padding-top: 1rem;
+    }
     .footer {
         position: absolute;
         bottom: 0;
