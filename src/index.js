@@ -1,4 +1,4 @@
-// Hours: 9.5
+// Hours: 10.5
 
 // TODO Restart functionality
 
