@@ -18,6 +18,7 @@
                 <ul>
                     <li><button id="IntroButton">Start</button></li>
                 </ul>
+                <span class="label">Sound on!</span>
             </div>
             <div id="IntroScreen" class="hidden">
                 <p>
@@ -57,8 +58,12 @@
             </div>
             <div id="VictoryScreen" class="hidden">
                 <p>Rescue is here<br />Your delinquent friends have come to your aid</p>
-                <button id="RestartButton">Play again</button>
+                <button id="PlayAgainButton">Play again</button>
             </div>
+        </div>
+        <div id="AudioContainer">
+            <audio id="BackgroundTrack" src="assets/audio/waves.mp3" autoplay loop></audio>
+            <audio id="EffectTrack" autoplay></audio>
         </div>
     </body>
 </html>
