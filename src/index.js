@@ -14,6 +14,7 @@ const AVG_SWIM_DELAY = 3
 const MAX_DEPTH = -13
 const SHARK_RADIUS = 300
 const PICKUP_TIME = 20
+const NUM_FISH = 20
 
 const TAU = Math.PI * 2
 const Y_AXIS = new THREE.Vector3(0, 1, 0)
@@ -24,7 +25,6 @@ let scene
 let renderer
 let water
 let shark
-const loadingFish = []
 let fishes = []
 
 let AirStat
@@ -36,6 +36,9 @@ let EffectTrack
 
 const eventQueue = []
 const initialState = {
+    panX: 0,
+    swimUp: false,
+    crank: false,
     gameLoopRunning: false,
     underwater: false,
     air: 100,
@@ -49,11 +52,6 @@ const initialState = {
 }
 let state
 
-let panX = 0
-
-let swimUp = false
-let crank = false
-
 const clock = new THREE.Clock()
 const lookAt = new THREE.Vector3(0, -10, 100)
 
@@ -65,22 +63,6 @@ const onWindowResize = () => {
     renderer.setSize(container.clientWidth, container.clientHeight)
 }
 
-const onStart = () => {
-    eventQueue.push('gameStart')
-}
-
-const onIntro = () => {
-    eventQueue.push('showIntro')
-}
-
-const onRestart = () => {
-    eventQueue.push('restart')
-}
-
-const resetShark = () => {
-    eventQueue.push('resetShark')
-}
-
 const newSharkPosition = () => {
     const position = new THREE.Vector3(1, 0, 0)
     position.applyAxisAngle(Y_AXIS, Math.random() * TAU)
@@ -90,7 +72,7 @@ const newSharkPosition = () => {
 }
 
 const onMouseMove = (e) => {
-    panX += e.movementX
+    state.panX += e.movementX
 }
 
 const onPointerLockChange = () => {
@@ -112,40 +94,67 @@ const exitPointerLock = () => {
 const onKeyDown = (e) => {
     switch (e.code) {
         case 'KeyW':
-            swimUp = true
+            state.swimUp = true
             break
         case 'KeyE':
-            crank = true
+            state.crank = true
             break
         case 'Space':
+        case 'Enter':
             eventQueue.push('flashLightOn')
-            break
-        case 'KeyR':
-            resetShark()
             break
         default:
             break
+    }
+
+    if (e instanceof window.MouseEvent) {
+        eventQueue.push('flashLightOn')
     }
 }
 
 const onKeyUp = (e) => {
     switch (e.code) {
         case 'KeyW':
-            swimUp = false
+            state.swimUp = false
             break
         case 'KeyE':
-            crank = false
+            state.crank = false
             break
         case 'Space':
+        case 'Enter':
             eventQueue.push('flashLightOff')
             break
         default:
             break
     }
+
+    if (e instanceof window.MouseEvent) {
+        eventQueue.push('flashLightOff')
+    }
 }
 
-function init() {
-    state = { ...initialState }
+function setUpDocument() {
+    window.addEventListener('resize', onWindowResize)
+    document.addEventListener('pointerlockchange', onPointerLockChange)
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('keyup', onKeyUp)
+    document.addEventListener('mousedown', onKeyDown)
+    document.addEventListener('mouseup', onKeyUp)
+
+    document.getElementById('StartButton').onclick = () => eventQueue.push('gameStart')
+    document.getElementById('IntroButton').onclick = () => eventQueue.push('showIntro')
+    document.getElementById('RestartButton').onclick = () => eventQueue.push('restart')
+    document.getElementById('PlayAgainButton').onclick = () => eventQueue.push('restart')
+
+    AirStat = document.getElementById('AirStat')
+    ChargeStat = document.getElementById('ChargeStat')
+    FPSCounter = document.getElementById('FPSCounter')
+    Time = document.getElementById('Time')
+    BackgroundTrack = document.getElementById('BackgroundTrack')
+    EffectTrack = document.getElementById('EffectTrack')
+}
+
+function setUpRenderer() {
     renderer = new THREE.WebGLRenderer({
         canvas: document.getElementById('WebGLCanvas'),
         antialias: true,
@@ -163,38 +172,27 @@ function init() {
     camera.position.set(0, 1, 0)
     camera.lookAt(lookAt)
 
+    scene.add(new THREE.AmbientLight(0x222222, 0.05))
+
     onWindowResize()
+}
 
-    const light = new THREE.AmbientLight(0x222222, 0.05)
-    scene.add(light)
+function loadSchoolOfFish() {
+    const loadingFish = []
 
-    flashLight = new Flashlight()
-    scene.add(flashLight)
-    scene.add(flashLight.target)
-    flashLight.target.position.set(0, 0, 1000)
-
-    water = new Water()
-    scene.add(water)
-
-    loadFish('assets/models/Shark.fbx', 0.1, 5).then((model) => {
-        shark = model
-        shark.position.copy(newSharkPosition())
-        scene.add(shark)
-    })
-
-    for (let i = 0; i < 30; i += 1) {
+    for (let i = 0, max = Math.round(NUM_FISH * 0.3); i < max; i += 1) {
         loadingFish.push(loadFish('assets/models/ClownFish.fbx', 0.01))
     }
 
-    for (let i = 0; i < 30; i += 1) {
+    for (let i = 0, max = Math.round(NUM_FISH * 0.3); i < max; i += 1) {
         loadingFish.push(loadFish('assets/models/TunaFish.fbx', (Math.random() * 0.02) + 0.02))
     }
 
-    for (let i = 0; i < 30; i += 1) {
+    for (let i = 0, max = Math.round(NUM_FISH * 0.3); i < max; i += 1) {
         loadingFish.push(loadFish('assets/models/BrownFish.fbx', 0.02))
     }
 
-    for (let i = 0; i < 5; i += 1) {
+    for (let i = 0, max = Math.round(NUM_FISH * 0.05); i < max; i += 1) {
         loadingFish.push(loadFish('assets/models/Turtle.fbx', 0.02))
     }
 
@@ -212,23 +210,43 @@ function init() {
         })
         eventQueue.push('fishLoaded')
     })
+}
 
-    window.addEventListener('resize', onWindowResize)
-    document.addEventListener('pointerlockchange', onPointerLockChange, false)
-    document.addEventListener('keydown', onKeyDown, false)
-    document.addEventListener('keyup', onKeyUp, false)
+function updateFish(delta) {
+    const theta = Math.PI * delta * 0.01
 
-    document.getElementById('StartButton').onclick = onStart
-    document.getElementById('IntroButton').onclick = onIntro
-    document.getElementById('RestartButton').onclick = onRestart
-    document.getElementById('PlayAgainButton').onclick = onRestart
+    fishes.forEach((fish) => {
+        fish.position.applyAxisAngle(Y_AXIS, theta * fish.speed)
 
-    AirStat = document.getElementById('AirStat')
-    ChargeStat = document.getElementById('ChargeStat')
-    FPSCounter = document.getElementById('FPSCounter')
-    Time = document.getElementById('Time')
-    BackgroundTrack = document.getElementById('BackgroundTrack')
-    EffectTrack = document.getElementById('EffectTrack')
+        fish.setRotationFromAxisAngle(
+            Y_AXIS, Math.atan2(fish.position.x, fish.position.z) - (Math.PI / 2),
+        )
+
+        fish.mixer.update(delta)
+    })
+}
+
+function init() {
+    state = { ...initialState }
+
+    setUpDocument()
+    setUpRenderer()
+
+    flashLight = new Flashlight()
+    scene.add(flashLight)
+    scene.add(flashLight.target)
+    flashLight.target.position.set(0, 0, 1000)
+
+    water = new Water()
+    scene.add(water)
+
+    loadFish('assets/models/Shark.fbx', 0.1, 5).then((model) => {
+        shark = model
+        shark.position.copy(newSharkPosition())
+        scene.add(shark)
+    })
+
+    loadSchoolOfFish()
 }
 
 function render() {
@@ -237,20 +255,7 @@ function render() {
 
     water.material.uniforms.time.value += 1.0 / 60.0
 
-    const theta = Math.PI * delta * 0.01
-    fishes.forEach((fish) => {
-        fish.position.set(
-            fish.position.x * Math.cos(theta * fish.speed) + fish.position.z * Math.sin(theta * fish.speed),
-            fish.position.y,
-            fish.position.z * Math.cos(theta * fish.speed) - fish.position.x * Math.sin(theta * fish.speed),
-        )
-
-        fish.setRotationFromAxisAngle(
-            new THREE.Vector3(0, 1, 0), Math.atan2(fish.position.x, fish.position.z) - (Math.PI / 2),
-        )
-
-        fish.mixer.update(delta)
-    })
+    updateFish(delta)
 
     if (state.gameLoopRunning) {
         state.timeLeft = Math.max(0, state.timeLeft - delta)
@@ -262,7 +267,7 @@ function render() {
         }
 
         if (camera.position.y < 0) {
-            const exerciseFactor = crank ? 0.25 : 1
+            const exerciseFactor = state.crank ? 0.25 : 1
             state.air = Math.max(0, state.air - ((100 / 30 / exerciseFactor) * delta))
             if (!state.underwater) {
                 BackgroundTrack.src = 'assets/audio/underwater2.mp3'
@@ -282,7 +287,7 @@ function render() {
 
         if (state.flashLightOn) {
             state.charge = Math.max(0, state.charge - ((100 / 5) * delta))
-        } else if (crank) {
+        } else if (state.crank) {
             state.charge = Math.min(100, state.charge + ((100 / 20) * delta))
         }
         ChargeStat.style.width = `${state.charge}%`
@@ -290,14 +295,14 @@ function render() {
             eventQueue.push('flashLightOff')
         }
 
-        if (swimUp) {
+        if (state.swimUp) {
             camera.position.y = Math.max(-10, Math.min(2, camera.position.y + 0.07))
         } else {
             camera.position.y = Math.max(-10, Math.min(2, camera.position.y - 0.07))
         }
 
         lookAt.y = camera.position.y - 10
-        lookAt.applyAxisAngle(new THREE.Vector3(0, 1, 0), panX * (Math.PI / 180 / -5))
+        lookAt.applyAxisAngle(new THREE.Vector3(0, 1, 0), state.panX * (Math.PI / 180 / -5))
 
         flashLight.position.copy(camera.position)
         flashLight.target.position.copy(lookAt)
@@ -321,7 +326,7 @@ function render() {
                 // Shark is swimming away while resetting
                 target = state.resetTarget
                 if (shark.position.length() > state.resetTarget.length() - 10) {
-                    resetShark()
+                    eventQueue.push('resetShark')
                 }
             } else {
                 // Shark swims towards camera
@@ -351,7 +356,7 @@ function render() {
 
     renderer.render(scene, camera)
 
-    panX = 0
+    state.panX = 0
 }
 
 function processEvents() {
@@ -423,9 +428,9 @@ function processEvents() {
 
 window.addEventListener('DOMContentLoaded', () => {
     function tick() {
-        requestAnimationFrame(tick)
         processEvents()
         render()
+        requestAnimationFrame(tick)
     }
 
     init()
