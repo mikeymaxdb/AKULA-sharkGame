@@ -1,4 +1,4 @@
-// Hours: 12
+// Hours: 15
 
 import * as THREE from 'three'
 
@@ -12,21 +12,35 @@ import 'style.scss'
 const INTRO_DELAY = 0
 const AVG_SWIM_DELAY = 3
 const MAX_DEPTH = -13
-const SHARK_RADIUS = 300
+const SHARK_START_RADIUS = 300
 const PICKUP_TIME = 20
 const NUM_FISH = 20
+const FLASHLIGHT_ANGLE = Math.PI / 6
+const SPOOK_RADIUS = 50
+const DEATH_RADIUS = 20
+const SWIM_SPEED = 3
+const SWIM_MAX = 1
+const SWIM_MIN = -10
+const PAN_SPEED = -5
+const CHARGE_SECONDS = 5
+const RECHARGE_SECONDS = 20
+const AIR_SECONDS = 30
+const BREATH_SECONDS = 5
+const EXERCISE_FACTOR = 0.25
 
 const TAU = Math.PI * 2
 const Y_AXIS = new THREE.Vector3(0, 1, 0)
 
-let camera
-let flashLight
-let scene
+// Rendered
 let renderer
+let camera
+let scene
+let flashLight
 let water
 let shark
 let fishes = []
 
+// DOM Elements
 let AirStat
 let ChargeStat
 let FPSCounter
@@ -34,26 +48,51 @@ let Time
 let BackgroundTrack
 let EffectTrack
 
+// Game state
 const eventQueue = []
-const initialState = {
-    panX: 0,
-    swimUp: false,
-    crank: false,
-    gameLoopRunning: false,
-    underwater: false,
-    air: 100,
-    charge: 100,
-    timeLeft: PICKUP_TIME,
-    flashLightOn: false,
-    resetTarget: new THREE.Vector3(),
-    resetting: false,
-    swimDelay: AVG_SWIM_DELAY,
-    speed: 1,
-}
 let state
+let clock
 
-const clock = new THREE.Clock()
-const lookAt = new THREE.Vector3(0, -10, 100)
+function newSharkPosition() {
+    const position = new THREE.Vector3(1, 0, 0)
+    position.applyAxisAngle(Y_AXIS, Math.random() * TAU)
+    position.multiplyScalar(SHARK_START_RADIUS)
+    position.y = MAX_DEPTH
+    return position
+}
+
+function newSwimDelay() {
+    return (Math.random() * AVG_SWIM_DELAY) + (AVG_SWIM_DELAY / 2)
+}
+
+function newState() {
+    return {
+        playerPosition: SWIM_MAX,
+        playerLookAt: new THREE.Vector3(0, -10, 100),
+        sharkPosition: newSharkPosition(),
+        sharkTarget: new THREE.Vector3(),
+        sharkSpeed: 1,
+        panX: 0,
+        swimUp: false,
+        crank: false,
+        gameLoopRunning: false,
+        underwater: false,
+        air: 100,
+        charge: 100,
+        timeLeft: PICKUP_TIME,
+        flashLightOn: false,
+        resetting: false,
+        swimDelay: newSwimDelay(),
+    }
+}
+
+function requestPointerLock() {
+    document.getElementById('WebGLCanvas').requestPointerLock()
+}
+
+function exitPointerLock() {
+    document.exitPointerLock()
+}
 
 const onWindowResize = () => {
     const container = document.getElementById('GLWindow')
@@ -61,14 +100,6 @@ const onWindowResize = () => {
     camera.updateProjectionMatrix()
 
     renderer.setSize(container.clientWidth, container.clientHeight)
-}
-
-const newSharkPosition = () => {
-    const position = new THREE.Vector3(1, 0, 0)
-    position.applyAxisAngle(Y_AXIS, Math.random() * TAU)
-    position.multiplyScalar(SHARK_RADIUS)
-    position.y = MAX_DEPTH
-    return position
 }
 
 const onMouseMove = (e) => {
@@ -81,14 +112,6 @@ const onPointerLockChange = () => {
     } else {
         document.removeEventListener('mousemove', onMouseMove, false)
     }
-}
-
-const requestPointerLock = () => {
-    document.getElementById('WebGLCanvas').requestPointerLock()
-}
-
-const exitPointerLock = () => {
-    document.exitPointerLock()
 }
 
 const onKeyDown = (e) => {
@@ -169,8 +192,8 @@ function setUpRenderer() {
     scene.fog = new THREE.FogExp2(0x002233, 0.008)
 
     camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 20000)
-    camera.position.set(0, 1, 0)
-    camera.lookAt(lookAt)
+    camera.position.set(0, state.playerPosition, 0)
+    camera.lookAt(state.playerLookAt)
 
     scene.add(new THREE.AmbientLight(0x222222, 0.05))
 
@@ -227,7 +250,8 @@ function updateFish(delta) {
 }
 
 function init() {
-    state = { ...initialState }
+    state = newState()
+    clock = new THREE.Clock()
 
     setUpDocument()
     setUpRenderer()
@@ -242,121 +266,42 @@ function init() {
 
     loadFish('assets/models/Shark.fbx', 0.1, 5).then((model) => {
         shark = model
-        shark.position.copy(newSharkPosition())
         scene.add(shark)
     })
 
     loadSchoolOfFish()
 }
 
-function render() {
-    const delta = clock.getDelta()
+function render(delta) {
+    // Update FPS counter
     FPSCounter.innerHTML = Math.round(1 / delta)
 
+    // Animate water
     water.material.uniforms.time.value += 1.0 / 60.0
 
+    // Swim fish
     updateFish(delta)
 
-    if (state.gameLoopRunning) {
-        state.timeLeft = Math.max(0, state.timeLeft - delta)
+    // Update UI
+    ChargeStat.style.width = `${state.charge}%`
+    AirStat.style.width = `${state.air}%`
+    Time.innerHTML = Math.round(state.timeLeft)
 
-        if (state.timeLeft) {
-            Time.innerHTML = Math.round(state.timeLeft)
-        } else if (state.swimDelay) {
-            eventQueue.push('victory')
-        }
+    // Position/orient camera/flashlight
+    camera.position.y = state.playerPosition
+    camera.lookAt(state.playerLookAt)
+    flashLight.position.copy(camera.position)
+    flashLight.target.position.copy(state.playerLookAt)
 
-        if (camera.position.y < 0) {
-            const exerciseFactor = state.crank ? 0.25 : 1
-            state.air = Math.max(0, state.air - ((100 / 30 / exerciseFactor) * delta))
-            if (!state.underwater) {
-                BackgroundTrack.src = 'assets/audio/underwater2.mp3'
-                state.underwater = true
-            }
-        } else {
-            state.air = Math.min(100, state.air + ((100 / 5) * delta))
-            if (state.underwater) {
-                BackgroundTrack.src = 'assets/audio/waves.mp3'
-                state.underwater = false
-            }
-        }
-        AirStat.style.width = `${state.air}%`
-        if (!state.air) {
-            eventQueue.push('death')
-        }
-
-        if (state.flashLightOn) {
-            state.charge = Math.max(0, state.charge - ((100 / 5) * delta))
-        } else if (state.crank) {
-            state.charge = Math.min(100, state.charge + ((100 / 20) * delta))
-        }
-        ChargeStat.style.width = `${state.charge}%`
-        if (!state.charge) {
-            eventQueue.push('flashLightOff')
-        }
-
-        if (state.swimUp) {
-            camera.position.y = Math.max(-10, Math.min(2, camera.position.y + 0.07))
-        } else {
-            camera.position.y = Math.max(-10, Math.min(2, camera.position.y - 0.07))
-        }
-
-        lookAt.y = camera.position.y - 10
-        lookAt.applyAxisAngle(new THREE.Vector3(0, 1, 0), state.panX * (Math.PI / 180 / -5))
-
-        flashLight.position.copy(camera.position)
-        flashLight.target.position.copy(lookAt)
-        camera.lookAt(lookAt)
-
-        // Shark
+    // Position/orient shark
+    if (shark) {
         shark.mixer.update(delta)
-        if (state.swimDelay > 0) {
-            // Shark is waiting
-            if (state.swimDelay - delta <= 0) {
-                window.setTimeout(() => {
-                    EffectTrack.src = 'assets/audio/attack.mp3'
-                }, 1000)
-            }
-            state.swimDelay = Math.max(0, state.swimDelay - delta)
-        } else {
-            // Shark is swimming
-            let target
-
-            if (state.resetting) {
-                // Shark is swimming away while resetting
-                target = state.resetTarget
-                if (shark.position.length() > state.resetTarget.length() - 10) {
-                    eventQueue.push('resetShark')
-                }
-            } else {
-                // Shark swims towards camera
-                target = camera.position.clone()
-                target.y -= 2.5
-            }
-
-            // Update shark position and rotation
-            shark.position.lerp(target, state.speed * delta)
-            shark.position.y = Math.min(shark.position.y, -9)
-            shark.lookAt(target)
-            shark.rotateY(Math.PI)
-
-            if (!state.resetting) {
-                if (shark.position.length() < 20) {
-                    eventQueue.push('death')
-                } else if (shark.position.length() < 50 && state.flashLightOn) {
-                    // check for flashlight angle
-                    if (flashLight.target.position.angleTo(shark.position) < Math.PI / 6) {
-                        state.resetting = true
-                        state.resetTarget.copy(newSharkPosition())
-                    }
-                }
-            }
-        }
+        shark.position.copy(state.sharkPosition)
+        shark.lookAt(state.sharkTarget)
+        shark.rotateY(Math.PI)
     }
 
     renderer.render(scene, camera)
-
-    state.panX = 0
 }
 
 function processEvents() {
@@ -398,11 +343,8 @@ function processEvents() {
                 document.getElementById('DeathScreen').classList.add('hidden')
                 document.getElementById('VictoryScreen').classList.add('hidden')
                 document.getElementById('IntroScreen').classList.remove('hidden')
-                state = { ...initialState }
-                camera.position.y = 1
                 BackgroundTrack.src = 'assets/audio/waves.mp3'
-                shark.position.copy(newSharkPosition())
-                state.swimDelay = (Math.random() * AVG_SWIM_DELAY) + (AVG_SWIM_DELAY / 2)
+                state = newState()
                 break
             case 'flashLightOn':
                 if (state.charge) {
@@ -414,10 +356,16 @@ function processEvents() {
                 flashLight.visible = false
                 state.flashLightOn = false
                 break
-            case 'resetShark':
-                shark.position.copy(newSharkPosition())
-                state.swimDelay = (Math.random() * AVG_SWIM_DELAY) + (AVG_SWIM_DELAY / 2)
-                state.resetting = false
+            case 'submerged':
+                BackgroundTrack.src = 'assets/audio/underwater2.mp3'
+                break
+            case 'surfaced':
+                BackgroundTrack.src = 'assets/audio/waves.mp3'
+                break
+            case 'sharkNear':
+                window.setTimeout(() => {
+                    EffectTrack.src = 'assets/audio/attack.mp3'
+                }, 1000)
                 break
             default:
                 break
@@ -426,10 +374,109 @@ function processEvents() {
     eventQueue.splice(0, eventQueue.length)
 }
 
+function updateGameState(delta) {
+    if (state.gameLoopRunning) {
+        // Update time till rescue
+        state.timeLeft = Math.max(0, state.timeLeft - delta)
+        // If no time left and the shark has reset
+        if (!state.timeLeft && state.swimDelay) {
+            eventQueue.push('victory')
+        }
+
+        // Update vertical player position
+        if (state.swimUp) {
+            state.playerPosition = Math.max(SWIM_MIN, Math.min(SWIM_MAX, state.playerPosition + (SWIM_SPEED * delta)))
+        } else {
+            state.playerPosition = Math.max(SWIM_MIN, Math.min(SWIM_MAX, state.playerPosition - (SWIM_SPEED * delta)))
+        }
+
+        // Update shark state
+        if (state.swimDelay > 0) {
+            // Shark is waiting
+            state.swimDelay = Math.max(0, state.swimDelay - delta)
+
+            if (!state.swimDelay) {
+                eventQueue.push('sharkNear')
+            }
+        } else {
+            // Shark is swimming
+            if (state.resetting) {
+                // Shark is close enough to reset
+                if (state.sharkPosition.distanceTo(state.sharkTarget) < 1) {
+                    // Move shark to new starting spot
+                    state.sharkPosition.copy(newSharkPosition())
+                    state.swimDelay = newSwimDelay()
+
+                    state.resetting = false
+                }
+            } else {
+                // Set the shark target to the player position
+                state.sharkTarget.set(0, state.playerPosition - 3, 0)
+
+                // If the shark is too close
+                if (state.sharkPosition.distanceTo(state.sharkTarget) < DEATH_RADIUS) {
+                    eventQueue.push('death')
+                } else if (state.sharkPosition.length() < SPOOK_RADIUS && state.flashLightOn) {
+                    // Check flashlight angle
+                    if (state.playerLookAt.angleTo(state.sharkPosition) < FLASHLIGHT_ANGLE) {
+                        // Successfully spooked the shark
+                        state.resetting = true
+                        state.sharkTarget.copy(newSharkPosition())
+                    }
+                }
+            }
+            // Shark moves towards target
+            state.sharkPosition.lerp(state.sharkTarget, state.sharkSpeed * delta)
+            // Prevent shark from surfacing
+            state.sharkPosition.y = Math.min(state.sharkPosition.y, -9)
+        }
+
+        // Update player view direction
+        state.playerLookAt.y = state.playerPosition - 10
+        state.playerLookAt.applyAxisAngle(Y_AXIS, state.panX * (Math.PI / 180 / PAN_SPEED))
+        state.panX = 0
+
+        // Update charge based on flashlight state
+        if (state.flashLightOn) {
+            state.charge = Math.max(0, state.charge - ((100 / CHARGE_SECONDS) * delta))
+
+            if (!state.charge) {
+                eventQueue.push('flashLightOff')
+            }
+        } else if (state.crank) {
+            state.charge = Math.min(100, state.charge + ((100 / RECHARGE_SECONDS) * delta))
+        }
+
+        // Update air based on player position/if cranking
+        if (state.playerPosition < 0) {
+            const adjustment = state.crank ? EXERCISE_FACTOR : 1
+            state.air = Math.max(0, state.air - ((100 / AIR_SECONDS / adjustment) * delta))
+
+            if (!state.air) {
+                eventQueue.push('death')
+            }
+            if (!state.underwater) {
+                state.underwater = true
+                eventQueue.push('submerged')
+            }
+        } else {
+            state.air = Math.min(100, state.air + ((100 / BREATH_SECONDS) * delta))
+            if (state.underwater) {
+                state.underwater = false
+                eventQueue.push('surfaced')
+            }
+        }
+    }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     function tick() {
+        const delta = clock.getDelta()
+
         processEvents()
-        render()
+        updateGameState(delta)
+        render(delta)
+
         requestAnimationFrame(tick)
     }
 
