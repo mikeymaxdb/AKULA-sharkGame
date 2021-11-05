@@ -1,4 +1,4 @@
-// Hours: 15
+// Hours: 15.5
 
 import * as THREE from 'three'
 
@@ -9,24 +9,29 @@ import Water from 'components/Water'
 
 import 'style.scss'
 
-const INTRO_DELAY = 0
-const AVG_SWIM_DELAY = 3
-const MAX_DEPTH = -13
-const SHARK_START_RADIUS = 300
-const PICKUP_TIME = 20
-const NUM_FISH = 20
+const PICKUP_TIME = 60
+
+const INTRO_DELAY = 4000
+const AVG_SWIM_DELAY = 8
 const FLASHLIGHT_ANGLE = Math.PI / 6
-const SPOOK_RADIUS = 50
-const DEATH_RADIUS = 20
-const SWIM_SPEED = 3
-const SWIM_MAX = 1
-const SWIM_MIN = -10
-const PAN_SPEED = -5
+
 const CHARGE_SECONDS = 5
 const RECHARGE_SECONDS = 20
 const AIR_SECONDS = 30
 const BREATH_SECONDS = 5
 const EXERCISE_FACTOR = 0.25
+
+const SPOOK_RADIUS = 50
+const DEATH_RADIUS = 20
+
+const NUM_FISH = 120
+const SHARK_START_DEPTH = -13
+const SHARK_START_RADIUS = 300
+const SHARK_SPEED_RAMP = 80
+const SWIM_SPEED = 3
+const SWIM_MAX = 1
+const SWIM_MIN = -10
+const PAN_SPEED = -6
 
 const TAU = Math.PI * 2
 const Y_AXIS = new THREE.Vector3(0, 1, 0)
@@ -57,7 +62,7 @@ function newSharkPosition() {
     const position = new THREE.Vector3(1, 0, 0)
     position.applyAxisAngle(Y_AXIS, Math.random() * TAU)
     position.multiplyScalar(SHARK_START_RADIUS)
-    position.y = MAX_DEPTH
+    position.y = SHARK_START_DEPTH
     return position
 }
 
@@ -71,7 +76,7 @@ function newState() {
         playerLookAt: new THREE.Vector3(0, -10, 100),
         sharkPosition: newSharkPosition(),
         sharkTarget: new THREE.Vector3(),
-        sharkSpeed: 1,
+        sharkSpeed: 1.3,
         panX: 0,
         swimUp: false,
         crank: false,
@@ -87,7 +92,9 @@ function newState() {
 }
 
 function requestPointerLock() {
-    document.getElementById('WebGLCanvas').requestPointerLock()
+    if (state.gameLoopRunning) {
+        document.getElementById('WebGLCanvas').requestPointerLock()
+    }
 }
 
 function exitPointerLock() {
@@ -322,9 +329,9 @@ function processEvents() {
             case 'gameStart':
                 document.getElementById('IntroScreen').classList.add('hidden')
                 document.getElementById('GameScreen').classList.remove('hidden')
+                state.gameLoopRunning = true
                 requestPointerLock()
                 document.getElementById('WebGLCanvas').addEventListener('click', requestPointerLock)
-                state.gameLoopRunning = true
                 break
             case 'death':
                 document.getElementById('GameScreen').classList.add('hidden')
@@ -426,7 +433,10 @@ function updateGameState(delta) {
                 }
             }
             // Shark moves towards target
-            state.sharkPosition.lerp(state.sharkTarget, state.sharkSpeed * delta)
+            state.sharkPosition.lerp(
+                state.sharkTarget,
+                (SHARK_SPEED_RAMP / state.sharkPosition.distanceTo(state.sharkTarget)) * state.sharkSpeed * delta,
+            )
             // Prevent shark from surfacing
             state.sharkPosition.y = Math.min(state.sharkPosition.y, -9)
         }
@@ -449,8 +459,11 @@ function updateGameState(delta) {
 
         // Update air based on player position/if cranking
         if (state.playerPosition < 0) {
-            const adjustment = state.crank ? EXERCISE_FACTOR : 1
-            state.air = Math.max(0, state.air - ((100 / AIR_SECONDS / adjustment) * delta))
+            state.air = Math.max(
+                0,
+                // Lose air faster if cranking
+                state.air - ((100 / AIR_SECONDS / (state.crank ? EXERCISE_FACTOR : 1)) * delta),
+            )
 
             if (!state.air) {
                 eventQueue.push('death')
@@ -470,8 +483,10 @@ function updateGameState(delta) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+    let delta
+
     function tick() {
-        const delta = clock.getDelta()
+        delta = clock.getDelta()
 
         processEvents()
         updateGameState(delta)
