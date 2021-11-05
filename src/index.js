@@ -1,4 +1,4 @@
-// Hours: 15.5
+// Hours: 16
 
 import * as THREE from 'three'
 
@@ -24,7 +24,6 @@ const EXERCISE_FACTOR = 0.25
 const SPOOK_RADIUS = 50
 const DEATH_RADIUS = 20
 
-const NUM_FISH = 120
 const SHARK_START_DEPTH = -13
 const SHARK_START_RADIUS = 300
 const SHARK_SPEED_RAMP = 80
@@ -32,6 +31,12 @@ const SWIM_SPEED = 3
 const SWIM_MAX = 1
 const SWIM_MIN = -10
 const PAN_SPEED = -6
+
+const NUM_FISH = 100
+const FISH_MIN = -40
+const FISH_MAX = -6
+const FISH_RADIUS = 70
+const FISH_DENSITY = 70
 
 const TAU = Math.PI * 2
 const Y_AXIS = new THREE.Vector3(0, 1, 0)
@@ -235,8 +240,8 @@ function loadSchoolOfFish() {
             position.applyAxisAngle(Y_AXIS, Math.random() * TAU)
 
             fish.position.copy(position)
-            fish.position.multiplyScalar((Math.random() * 70) + 80)
-            fish.position.y = (Math.random() * -50) - 10
+            fish.position.multiplyScalar((Math.random() * FISH_DENSITY) + FISH_RADIUS)
+            fish.position.y = (Math.random() * FISH_MIN) + FISH_MAX
         })
         eventQueue.push('fishLoaded')
     })
@@ -333,13 +338,16 @@ function processEvents() {
                 requestPointerLock()
                 document.getElementById('WebGLCanvas').addEventListener('click', requestPointerLock)
                 break
-            case 'death':
+            case 'death-shark':
+            case 'death-air': {
+                const message = event === 'death-air' ? 'YOU DROWNED' : 'YOU WERE TORN APART'
+                document.getElementById('Cause').innerHTML = message
                 document.getElementById('GameScreen').classList.add('hidden')
                 document.getElementById('DeathScreen').classList.remove('hidden')
                 state.gameLoopRunning = false
-                // BackgroundTrack.src = 'assets/audio/scream.mp3'
                 exitPointerLock()
                 break
+            }
             case 'victory':
                 document.getElementById('GameScreen').classList.add('hidden')
                 document.getElementById('VictoryScreen').classList.remove('hidden')
@@ -422,7 +430,7 @@ function updateGameState(delta) {
 
                 // If the shark is too close
                 if (state.sharkPosition.distanceTo(state.sharkTarget) < DEATH_RADIUS) {
-                    eventQueue.push('death')
+                    eventQueue.push('death-shark')
                 } else if (state.sharkPosition.length() < SPOOK_RADIUS && state.flashLightOn) {
                     // Check flashlight angle
                     if (state.playerLookAt.angleTo(state.sharkPosition) < FLASHLIGHT_ANGLE) {
@@ -466,7 +474,7 @@ function updateGameState(delta) {
             )
 
             if (!state.air) {
-                eventQueue.push('death')
+                eventQueue.push('death-air')
             }
             if (!state.underwater) {
                 state.underwater = true
