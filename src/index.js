@@ -63,6 +63,9 @@ const eventQueue = []
 let state
 let clock
 
+// App settings
+let soundOn = true
+
 function newSharkPosition() {
     const position = new THREE.Vector3(1, 0, 0)
     position.applyAxisAngle(Y_AXIS, Math.random() * TAU)
@@ -168,6 +171,15 @@ const onKeyUp = (e) => {
     }
 }
 
+const onToggleSound = () => {
+    document.querySelectorAll('audio').forEach((audio) => {
+        audio.muted = soundOn
+    })
+    document.getElementById('SoundButton').classList.toggle('muted', soundOn)
+
+    soundOn = !soundOn
+}
+
 function setUpDocument() {
     window.addEventListener('resize', onWindowResize)
     document.addEventListener('pointerlockchange', onPointerLockChange)
@@ -180,6 +192,7 @@ function setUpDocument() {
     document.getElementById('IntroButton').onclick = () => eventQueue.push('showIntro')
     document.getElementById('RestartButton').onclick = () => eventQueue.push('restart')
     document.getElementById('PlayAgainButton').onclick = () => eventQueue.push('restart')
+    document.getElementById('SoundButton').onclick = onToggleSound
 
     AirStat = document.getElementById('AirStat')
     ChargeStat = document.getElementById('ChargeStat')

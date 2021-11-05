@@ -66,6 +66,33 @@ button {
     padding: 0.1rem;
 }
 
+#SoundButton {
+    background-color: transparent;
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    padding: 0;
+    opacity: 0.85;
+
+    img {
+        width: 0.8rem;
+        height: 0.8rem;
+        display: block;
+
+        &.off {
+            display: none;
+        }
+    }
+    &.muted {
+        img.on {
+            display: none;
+        }
+        img.off {
+            display: block;
+        }
+    }
+}
+
 #UI {
     pointer-events: none;
     position: absolute;
