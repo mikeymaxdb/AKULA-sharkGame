@@ -38,7 +38,7 @@ jobs:
       - name: NodeJS
         uses: actions/setup-node@v3.6.0
         with:
-          node-version: 16
+          node-version: 14
       - name: npm install
         run: npm ci
       - name: build
@@ -46,7 +46,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          # Upload entire repository
           path: './dist/'
       - name: Deploy to GitHub Pages
         id: deployment
