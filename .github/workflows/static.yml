@@ -28,8 +28,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    env:
-      NODE_ENV: production
     steps:
       - uses: actions/checkout@v3
       - uses: actions/configure-pages@v3
@@ -38,7 +36,7 @@ jobs:
         with:
           node-version: 14
       - name: npm install
-        run: npm ci --include=dev
+        run: npm ci
       - name: build
         run: npm run build
       - name: Upload artifact
